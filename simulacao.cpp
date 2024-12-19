@@ -371,7 +371,13 @@ void Simulacao::comprarCaravana(char cidade, Caravana::Tipo tipo) {
     if (moedas >= precoCaravana) {
         Cidade* c = mapa.getCidade(cidade);
         if (c != nullptr) {
-            int novoId = c->getProximaCaravanaId();
+            int novoId = mapa.getNextAvailableId();
+            if (novoId == -1) {
+                std::cout << "Limite máximo de caravanas atingido (10)." << std::endl;
+                return;
+            }
+            
+            std::cout << "Creating new caravana with ID " << novoId << " at city " << cidade << std::endl;
             adicionarCaravana(novoId, c->getX(), c->getY(), tipo);
             moedas -= precoCaravana;
             std::cout << "Caravana criada com ID " << novoId << std::endl;
@@ -504,13 +510,19 @@ void Simulacao::comprac(char cidade, char tipo) {
     std::cout << "Attempting to buy caravana at city " << cidade << " of type " << tipo << std::endl;
     
     if (moedas < precoCaravana) {
-        std::cout << "Moedas insuficientes. Necess��rio: " << precoCaravana << ", Disponível: " << moedas << std::endl;
+        std::cout << "Moedas insuficientes. Necessário: " << precoCaravana << ", Disponível: " << moedas << std::endl;
         return;
     }
 
     Cidade* c = mapa.getCidade(cidade);
     if (!c) {
         std::cout << "Cidade '" << cidade << "' não encontrada no mapa." << std::endl;
+        return;
+    }
+
+    int novoId = mapa.getNextAvailableId();  // Changed from c->getProximaCaravanaId()
+    if (novoId == -1) {
+        std::cout << "Limite máximo de caravanas atingido (10)." << std::endl;
         return;
     }
 
@@ -524,7 +536,6 @@ void Simulacao::comprac(char cidade, char tipo) {
             return;
     }
 
-    int novoId = c->getProximaCaravanaId();
     mapa.adicionarCaravana(novoId, c->getX(), c->getY(), tipoCaravana);
     moedas -= precoCaravana;
     std::cout << "Caravana " << novoId << " criada com sucesso em (" << c->getX() << "," << c->getY() << ")" << std::endl;

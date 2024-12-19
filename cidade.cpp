@@ -2,7 +2,7 @@
 #include <iostream>
 
 // Remove constructor since it's already defined in the header
-// Cidade::Cidade(char nome, int x, int y) : nome(nome), x(x), y(y) { ... }
+// Cidade::Cidade(char nome, int x, int y) : nome(nome), x(x, y) { ... }
 
 void Cidade::adicionarCaravana(const Caravana& caravana) {
     std::cout << "Adding caravana to city " << nome << " at position (" << x << "," << y << ")" << std::endl;
@@ -30,10 +30,8 @@ char Cidade::getNome() const {
     return nome;
 }
 
-int Cidade::getProximaCaravanaId() const {
-    static int nextId = 0;
-    return nextId++;
-}
+// Remove the getProximaCaravanaId method entirely as it's no longer needed
+// The ID will be provided by Mapa::getNextAvailableId()
 
 int Cidade::getX() const {
     return x;

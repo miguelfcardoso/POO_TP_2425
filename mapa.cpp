@@ -2,6 +2,7 @@
 #include "mapa.h"
 #include "caravana.h"
 #include "barbaro.h"
+#include "cidade.h"  // Add this include here instead of in mapa.h
 #include "simulacao.h"
 #include <cstring>
 
@@ -252,6 +253,10 @@ void Mapa::adicionarCaravana(int id, int x, int y) {
 
 void Mapa::adicionarCaravana(int id, int x, int y, Caravana::Tipo tipo) {
     if (x >= 0 && x < linhas && y >= 0 && y < colunas) {
+        std::cout << "Adding caravana with ID " << id << " at (" << x << "," << y << ")" << std::endl;
+        if (caravanas.find(id) != caravanas.end()) {
+            std::cout << "Warning: Overwriting existing caravana with ID " << id << std::endl;
+        }
         caravanas[id] = Caravana(id, x, y, tipo);
         mapa[x][y] = '0' + id;
     }
@@ -301,4 +306,15 @@ void Mapa::adicionarCidade(char nome, int x, int y) {
         mapa[x][y] = nome;
         std::cout << "Added city " << nome << " at position (" << x << "," << y << ")" << std::endl;
     }
+}
+
+int Mapa::getNextAvailableId() const {
+    for (int i = 0; i < 10; i++) {
+        if (caravanas.find(i) == caravanas.end()) {
+            std::cout << "Next available ID: " << i << std::endl;
+            return i;
+        }
+    }
+    std::cout << "No available IDs!" << std::endl;
+    return -1;
 }

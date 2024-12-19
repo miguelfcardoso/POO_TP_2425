@@ -1,29 +1,35 @@
 #ifndef MAPA_H
 #define MAPA_H
 
-#include <vector>
 #include <map>
-#include <utility>
+#include <vector>
+#include <string>
 #include "caravana.h"
 #include "barbaro.h"
-#include "cidade.h"
 #include "item.h"
-#include "buffer.h"
-#include <cstring>
+#include "buffer.h"  // Add this include
 
-class Simulacao; // Forward declaration
+// Forward declaration
+class Cidade;
+class Simulacao;
 
 class Mapa {
 private:
-    char** mapa;  // Replace vector<vector<char>>
     int linhas, colunas;
-    std::map<char, Cidade> cidades;  // Changed from std::pair<int, int>
+    char** mapa;
+    std::map<char, Cidade> cidades;
     std::map<int, Caravana> caravanas;
     std::vector<Barbaro> barbaros;
     std::vector<Item> itens;
 
 public:
-    Mapa(int l, int c);
+    Mapa(int l = 10, int c = 20);
+    ~Mapa();
+    // Copy constructor
+    Mapa(const Mapa& other);
+    // Assignment operator
+    Mapa& operator=(const Mapa& other);
+
     void adicionarElemento(int x, int y, char tipo);
     void exibirMapa();
     void exibirParaBuffer(Buffer& buffer) const;
@@ -48,9 +54,7 @@ public:
     bool isPosicaoVazia(int x, int y) const;
     int contarItens() const;
     void verificarInteracoesItens(Simulacao& simulacao);
-    virtual ~Mapa();
-    Mapa(const Mapa& other);
-    Mapa& operator=(const Mapa& other);
+    int getNextAvailableId() const;  // Add this declaration
 };
 
 #endif

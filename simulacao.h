@@ -1,10 +1,14 @@
 #pragma once
+#ifndef SIMULACAO_H
+#define SIMULACAO_H
+
 #include <string>
 #include <map>
 #include "mapa.h"
 #include "caravana.h"
 #include "barbaro.h"
 #include "buffer.h"
+#include "cidade.h"  // Add this include
 
 class Simulacao {
 private:
@@ -66,3 +70,5 @@ public:
     void terminar();
     int getMoedas() const { return moedas; }  // Add this getter
 };
+
+#endif
