@@ -65,17 +65,35 @@ void Buffer::esvaziar() {
 }
 
 void Buffer::transcreverParaConsola() const {
+    // Clear screen once
+    std::cout << "\033[2J\033[H";
+    
+    // Draw single border
+    std::cout << "╔";
+    for (int j = 0; j < colunas; ++j) std::cout << "═";
+    std::cout << "╗\n";
+
+    // Draw map content
     for (int i = 0; i < linhas; ++i) {
-        std::string linha;
+        std::cout << "║";
         for (int j = 0; j < colunas; ++j) {
-            linha += buffer[i][j];
+            char c = buffer[i][j];
+            
+            if (c >= 'a' && c <= 'z') std::cout << "\033[32m" << c << "\033[0m";
+            else if (c >= '0' && c <= '9') std::cout << "\033[34m" << c << "\033[0m";
+            else if (c == '!') std::cout << "\033[31m" << c << "\033[0m";
+            else if (c == '+') std::cout << "\033[33m" << c << "\033[0m";
+            else if (c == 'I') std::cout << "\033[35m" << c << "\033[0m";
+            else if (c == '*') std::cout << "\033[33;1m" << c << "\033[0m";  // Bright yellow for sandstorm
+            else std::cout << ".";
         }
-        // Remove trailing spaces
-        while (!linha.empty() && linha.back() == ' ') {
-            linha.pop_back();
-        }
-        std::cout << linha << std::endl;
+        std::cout << "║\n";
     }
+
+    // Draw bottom border
+    std::cout << "╚";
+    for (int j = 0; j < colunas; ++j) std::cout << "═";
+    std::cout << "╝" << std::endl;
 }
 
 void Buffer::moverCursor(int x, int y) {

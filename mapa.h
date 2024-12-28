@@ -55,6 +55,7 @@ public:
     int contarItens() const;
     void verificarInteracoesItens(Simulacao& simulacao);
     int getNextAvailableId() const;  // Add this declaration
+    const std::map<char, Cidade>& getCidades() const { return cidades; }
 };
 
 #endif

@@ -4,7 +4,7 @@
 #include <climits>  // Add this for INT_MAX
 #include "simulacao.h"
 
-Simulacao::Simulacao() : mapa(10, 20), buffer(new Buffer(20, 40)), moedas(1000), instantesEntreNovosItens(10),
+Simulacao::Simulacao() : mapa(10, 20), buffer(new Buffer(10, 20)), moedas(1000), instantesEntreNovosItens(10),
                          duracaoItem(20), maxItens(5), precoVendaMercadoria(2),
                          precoCompraMercadoria(1), precoCaravana(100),
                          instantesEntreNovosBarbaros(40), duracaoBarbaros(60),
@@ -119,7 +119,7 @@ void Simulacao::exibirMapa() {
     buffer->esvaziar();
     mapa.exibirParaBuffer(*buffer);
     buffer->transcreverParaConsola();
-    std::cout << "Moedas: " << moedas << std::endl;
+    std::cout << "\nMoedas: " << moedas << std::endl;
 }
 
 void Simulacao::iniciarSimulacao() {
@@ -187,28 +187,28 @@ void Simulacao::realizarCombate(Caravana& caravana, Barbaro& barbaro) {
 }
 
 void Simulacao::passarInstantes(int instantes) {
+    bool debugOutput = false;  // Reduce console spam
+    
     for (int i = 0; i < instantes; ++i) {
         instantesDecorridos++;
         
-        // Move caravanas
         for (auto& [id, caravana] : mapa.getCaravanas()) {
             if (!caravana.isDestruida()) {
                 if (!caravana.getAutogestao()) {
-                    // More diverse movement options
                     char directions[] = {'C', 'B', 'E', 'D', 'Q', 'W', 'A', 'S'};
                     char dir = directions[rand() % 8];
-                    std::cout << "Moving caravana " << id << " in direction " << dir << std::endl;
+                    if (debugOutput) {
+                        std::cout << "Moving caravana " << id << " in direction " << dir << std::endl;
+                    }
                     mapa.moverCaravana(id, dir);
                 }
                 
-                // Update water consumption with feedback
-                int prevWater = caravana.getAgua();
                 caravana.consumirAgua();
-                std::cout << "Caravana " << id << " water: " << prevWater << " -> " << caravana.getAgua() << std::endl;
-                
                 if (mapa.isCidade(caravana.getX(), caravana.getY())) {
                     caravana.reabastecerAgua();
-                    std::cout << "Caravana " << id << " refilled water at city" << std::endl;
+                    if (debugOutput) {
+                        std::cout << "Caravana " << id << " refilled water at city" << std::endl;
+                    }
                 }
             }
         }
@@ -307,8 +307,14 @@ void Simulacao::passarInstantes(int instantes) {
                 caravana.reabastecerAgua();
             }
         }
+        
+        if (debugOutput) {
+            exibirMapa();  // Only show intermediate states if debugging
+        }
     }
-    exibirMapa(); // Show updated state after all instants
+    
+    // Always show final state
+    exibirMapa();
 }
 
 // Update method signature to match header
@@ -394,7 +400,16 @@ void Simulacao::executarComandos(const std::string& comando) {
     std::string cmd;
     ss >> cmd;
 
-    if (cmd == "config") {
+    // Fix command parsing to properly handle invalid commands
+    if (cmd == "compra") {
+        int id;
+        int quantidade;
+        if (!(ss >> id >> quantidade)) {
+            std::cout << "Uso correto: compra <id> <quantidade>" << std::endl;
+            return;
+        }
+        compra(id, quantidade);
+    } else if (cmd == "config") {
         std::string filename;
         ss >> filename;
         lerConfig(filename);
@@ -500,10 +515,8 @@ void Simulacao::exec(const std::string &nomeFicheiro) {
 }
 
 void Simulacao::prox(int n) {
-    for (int i = 0; i < n; ++i) {
-        passarInstantes(1);
-        exibirMapa();
-    }
+    passarInstantes(n);
+    // Remove duplicate exibirMapa call since passarInstantes handles it
 }
 
 void Simulacao::comprac(char cidade, char tipo) {
@@ -543,14 +556,22 @@ void Simulacao::comprac(char cidade, char tipo) {
 
 void Simulacao::compra(int id, int quantidade) {
     try {
+        // Validate quantity first
         if (quantidade <= 0) {
             std::cout << "Quantidade inválida." << std::endl;
             return;
         }
-        
+
         auto& caravana = mapa.getCaravanas().at(id);
-        int custo = quantidade * precoCompraMercadoria;
         
+        // Check if caravana is in a city
+        bool estaNaCidade = mapa.isCidade(caravana.getX(), caravana.getY());
+        if (!estaNaCidade) {
+            std::cout << "A caravana deve estar em uma cidade para comprar mercadorias." << std::endl;
+            return;
+        }
+        
+        int custo = quantidade * precoCompraMercadoria;
         if (moedas < custo) {
             std::cout << "Moedas insuficientes." << std::endl;
             return;
@@ -564,6 +585,7 @@ void Simulacao::compra(int id, int quantidade) {
         moedas -= custo;
         caravana.comprarMercadoria(quantidade, precoCompraMercadoria);
         std::cout << "Compra realizada com sucesso." << std::endl;
+        
     } catch (const std::out_of_range&) {
         std::cout << "Caravana " << id << " não encontrada." << std::endl;
     }
@@ -638,7 +660,10 @@ void Simulacao::lists() {
 }
 
 void Simulacao::dels(const std::string& nome) {
-    if (bufferSaves.erase(nome) > 0) {
+    auto it = bufferSaves.find(nome);
+    if (it != bufferSaves.end()) {
+        delete it->second;
+        bufferSaves.erase(it);
         std::cout << "Estado visual '" << nome << "' apagado." << std::endl;
     } else {
         std::cout << "Estado visual '" << nome << "' não encontrado." << std::endl;
@@ -647,5 +672,4 @@ void Simulacao::dels(const std::string& nome) {
 
 void Simulacao::terminar() {
     terminarSimulacao();
-    // Implementar lógica para reiniciar a simulação ou sair do programa
 }

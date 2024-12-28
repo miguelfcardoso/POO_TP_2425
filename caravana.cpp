@@ -112,13 +112,16 @@ void Caravana::comprarMercadoria(int quantidade, int precoCompra) {
 void Caravana::consumirAgua() {
     if (destruida) return;
     
-    int consumo = 0;
+    int consumo = 1;  // Base consumption
     switch (tipo) {
         case COMERCIO:
-            consumo = (tripulantes > maxTripulantes/2) ? 2 : (tripulantes > 0 ? 1 : 0);
+            consumo = (tripulantes > maxTripulantes/2) ? 2 : 1;
             break;
         case MILITAR:
-            consumo = (tripulantes > maxTripulantes/2) ? 3 : 1;
+            consumo = (tripulantes > maxTripulantes/2) ? 3 : 2;
+            break;
+        case SECRETA:
+            consumo = 1;
             break;
     }
     
