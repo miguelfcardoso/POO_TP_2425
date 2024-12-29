@@ -2,6 +2,7 @@
 #include <fstream>
 #include <sstream>
 #include <climits>  // Add this for INT_MAX
+#include <functional>  // Add this at the top with other includes
 #include "simulacao.h"
 
 Simulacao::Simulacao() : mapa(10, 20), buffer(new Buffer(10, 20)), moedas(1000), instantesEntreNovosItens(10),
@@ -17,7 +18,7 @@ Simulacao::~Simulacao() {
     }
 }
 
-void Simulacao::lerConfig(const std::string &nomeFicheiro) {
+void Simulacao::carregarArquivo(const std::string& nomeFicheiro, bool isConfig) {
     // Try different possible file locations with absolute path
     std::vector<std::string> possiblePaths = {
         nomeFicheiro,
@@ -161,27 +162,43 @@ void Simulacao::aplicarEfeitoItem(Caravana& caravana, Item::Tipo tipo) {
     }
 }
 
-void Simulacao::realizarCombate(Caravana& caravana, Barbaro& barbaro) {
-    int forcaCaravana = rand() % (caravana.getTripulantes() + 1);
-    int forcaBarbaro = rand() % (barbaro.getTripulantes() + 1);
-
-    if (forcaCaravana > forcaBarbaro) {
-        int perdaCaravana = caravana.getTripulantes() * 0.2;
-        int perdaBarbaro = perdaCaravana * 2;
-        caravana.adicionarTripulantes(-perdaCaravana);
-        barbaro.adicionarTripulantes(-perdaBarbaro);
-        if (barbaro.getTripulantes() <= 0) {
-            caravana.adicionarAgua(barbaro.getAgua());
-            barbaro.destruir();
+void Simulacao::processarCombates() {
+    std::vector<std::pair<Caravana*, Barbaro*>> combatesPendentes;
+    
+    // Collect all potential combats
+    for (auto& [id, caravana] : mapa.getCaravanas()) {
+        for (auto& barbaro : mapa.getBarbaros()) {
+            if (verificarCombate(caravana.getX(), caravana.getY(), 
+                               barbaro.getX(), barbaro.getY())) {
+                combatesPendentes.push_back(std::make_pair(&caravana, const_cast<Barbaro*>(&barbaro)));
+            }
         }
-    } else {
-        int perdaBarbaro = barbaro.getTripulantes() * 0.2;
-        int perdaCaravana = perdaBarbaro * 2;
-        barbaro.adicionarTripulantes(-perdaBarbaro);
-        caravana.adicionarTripulantes(-perdaCaravana);
-        if (caravana.getTripulantes() <= 0) {
-            barbaro.adicionarAgua(caravana.getAgua());
-            caravana.destruir();
+    }
+    
+    // Process all combats
+    for (auto& [caravana, barbaro] : combatesPendentes) {
+        int forcaCaravana = rand() % (caravana->getTripulantes() + 1);
+        int forcaBarbaro = rand() % (barbaro->getTripulantes() + 1);
+
+        if (forcaCaravana > forcaBarbaro) {
+            combatesVencidos++;
+            int perdaCaravana = caravana->getTripulantes() * 0.2;
+            int perdaBarbaro = perdaCaravana * 2;
+            caravana->adicionarTripulantes(-perdaCaravana);
+            barbaro->adicionarTripulantes(-perdaBarbaro);
+            if (barbaro->getTripulantes() <= 0) {
+                caravana->adicionarAgua(barbaro->getAgua());
+                barbaro->destruir();
+            }
+        } else {
+            int perdaBarbaro = barbaro->getTripulantes() * 0.2;
+            int perdaCaravana = perdaBarbaro * 2;
+            barbaro->adicionarTripulantes(-perdaBarbaro);
+            caravana->adicionarTripulantes(-perdaCaravana);
+            if (caravana->getTripulantes() <= 0) {
+                barbaro->adicionarAgua(caravana->getAgua());
+                caravana->destruir();
+            }
         }
     }
 }
@@ -218,13 +235,13 @@ void Simulacao::passarInstantes(int instantes) {
             if (!barbaro.isDestruido()) {
                 // Find closest caravana
                 int minDist = INT_MAX;
-                std::pair<int, int> target = {-1, -1};
-                for (const auto& [id, caravana] : mapa.getCaravanas()) {
-                    int dist = abs(barbaro.getX() - caravana.getX()) + 
-                             abs(barbaro.getY() - caravana.getY());
+                std::pair<int, int> target(-1, -1);  // Initialize with constructor instead of braces
+                for (const auto& [id, car] : mapa.getCaravanas()) {
+                    int dist = abs(barbaro.getX() - car.getX()) + 
+                             abs(barbaro.getY() - car.getY());
                     if (dist < minDist) {
                         minDist = dist;
-                        target = {caravana.getX(), caravana.getY()};
+                        target = std::make_pair(car.getX(), car.getY());  // Use make_pair instead of brace initialization
                     }
                 }
                 if (target.first != -1) {
@@ -313,6 +330,12 @@ void Simulacao::passarInstantes(int instantes) {
         }
     }
     
+    // Add combat tracking
+    processarCombates();
+    
+    // Add statistics update
+    atualizarEstatisticas();
+    
     // Always show final state
     exibirMapa();
 }
@@ -396,163 +419,126 @@ void Simulacao::comprarCaravana(char cidade, Caravana::Tipo tipo) {
 }
 
 void Simulacao::executarComandos(const std::string& comando) {
+    using CommandFunction = std::function<void(Simulacao&, std::istringstream&)>;
+    static const std::map<std::string, CommandFunction> comandos = {
+        {"compra", [](Simulacao& sim, std::istringstream& ss) {
+            int id, quantidade;
+            if (ss >> id >> quantidade) sim.compra(id, quantidade);
+        }},
+        {"config", [](Simulacao& sim, std::istringstream& ss) {
+            std::string filename;
+            ss >> filename;
+            sim.carregarArquivo(filename, true);
+        }},
+        {"exec", [](Simulacao& sim, std::istringstream& ss) {
+            std::string filename;
+            ss >> filename;
+            sim.carregarArquivo(filename, false);
+        }},
+        {"prox", [](Simulacao& sim, std::istringstream& ss) {
+            int n = 1;  // default value
+            ss >> n;
+            sim.prox(n);
+        }},
+        {"comprac", [](Simulacao& sim, std::istringstream& ss) {
+            char cidade, tipo;
+            ss >> cidade >> tipo;
+            sim.comprac(cidade, tipo);
+        }},
+        {"precos", [](Simulacao& sim, std::istringstream& ss) {
+            sim.precos();
+        }},
+        {"cidade", [](Simulacao& sim, std::istringstream& ss) {
+            char nome;
+            ss >> nome;
+            sim.cidade(nome);
+        }},
+        {"caravana", [](Simulacao& sim, std::istringstream& ss) {
+            int id;
+            if (ss >> id) {
+                try {
+                    sim.caravana(id);
+                } catch (const std::out_of_range& e) {
+                    std::cout << "Caravana " << id << " não encontrada." << std::endl;
+                }
+            } else {
+                std::cout << "Uso correto: caravana <id>" << std::endl;
+            }
+        }},
+        {"vende", [](Simulacao& sim, std::istringstream& ss) {
+            int id;
+            ss >> id;
+            sim.vende(id);
+        }},
+        {"move", [](Simulacao& sim, std::istringstream& ss) {
+            int id;
+            char direcao;
+            ss >> id >> direcao;
+            sim.move(id, direcao);
+        }},
+        {"auto", [](Simulacao& sim, std::istringstream& ss) {
+            int id;
+            ss >> id;
+            sim.autoGestao(id);
+        }},
+        {"stop", [](Simulacao& sim, std::istringstream& ss) {
+            int id;
+            ss >> id;
+            sim.stop(id);
+        }},
+        {"barbaro", [](Simulacao& sim, std::istringstream& ss) {
+            int x, y;
+            ss >> x >> y;
+            sim.barbaro(x, y);
+        }},
+        {"areia", [](Simulacao& sim, std::istringstream& ss) {
+            int x, y, raio;
+            ss >> x >> y >> raio;
+            sim.areia(x, y, raio);
+        }},
+        {"moedas", [](Simulacao& sim, std::istringstream& ss) {
+            int quantidade;
+            ss >> quantidade;
+            sim.adicionarMoedas(quantidade);
+        }},
+        {"tripul", [](Simulacao& sim, std::istringstream& ss) {
+            int id, quantidade;
+            ss >> id >> quantidade;
+            sim.tripul(id, quantidade);
+        }},
+        {"saves", [](Simulacao& sim, std::istringstream& ss) {
+            std::string nome;
+            ss >> nome;
+            sim.saves(nome);
+        }},
+        {"loads", [](Simulacao& sim, std::istringstream& ss) {
+            std::string nome;
+            ss >> nome;
+            sim.loads(nome);
+        }},
+        {"lists", [](Simulacao& sim, std::istringstream& ss) {
+            sim.lists();
+        }},
+        {"dels", [](Simulacao& sim, std::istringstream& ss) {
+            std::string nome;
+            ss >> nome;
+            sim.dels(nome);
+        }},
+        {"terminar", [](Simulacao& sim, std::istringstream& ss) {
+            sim.terminar();
+        }},
+    };
+    
     std::istringstream ss(comando);
     std::string cmd;
     ss >> cmd;
-
-    // Fix command parsing to properly handle invalid commands
-    if (cmd == "compra") {
-        int id;
-        int quantidade;
-        if (!(ss >> id >> quantidade)) {
-            std::cout << "Uso correto: compra <id> <quantidade>" << std::endl;
-            return;
-        }
-        compra(id, quantidade);
-    } else if (cmd == "config") {
-        std::string filename;
-        ss >> filename;
-        lerConfig(filename);
-    } else if (cmd == "exec") {
-        std::string filename;
-        ss >> filename;
-        exec(filename);
-    } else if (cmd == "prox") {
-        int n = 1;  // default value
-        ss >> n;
-        prox(n);
-    } else if (cmd == "comprac") {
-        char cidade;
-        char tipo;
-        ss >> cidade >> tipo;
-        comprac(cidade, tipo);
-    } else if (cmd == "precos") {
-        precos();
-    } else if (cmd == "cidade") {
-        char nome;
-        ss >> nome;
-        cidade(nome);
-    } else if (cmd == "caravana") {
-        int id;
-        if (ss >> id) {
-            try {
-                caravana(id);
-            } catch (const std::out_of_range& e) {
-                std::cout << "Caravana " << id << " não encontrada." << std::endl;
-            }
-        } else {
-            std::cout << "Uso correto: caravana <id>" << std::endl;
-        }
-    } else if (cmd == "compra") {
-        int id, quantidade;
-        ss >> id >> quantidade;
-        compra(id, quantidade);
-    } else if (cmd == "vende") {
-        int id;
-        ss >> id;
-        vende(id);
-    } else if (cmd == "move") {
-        int id;
-        char direcao;
-        ss >> id >> direcao;
-        move(id, direcao);
-    } else if (cmd == "auto") {
-        int id;
-        ss >> id;
-        autoGestao(id);
-    } else if (cmd == "stop") {
-        int id;
-        ss >> id;
-        stop(id);
-    } else if (cmd == "barbaro") {
-        int x, y;
-        ss >> x >> y;
-        barbaro(x, y);
-    } else if (cmd == "areia") {
-        int x, y, raio;
-        ss >> x >> y >> raio;
-        areia(x, y, raio);
-    } else if (cmd == "moedas") {
-        int quantidade;
-        ss >> quantidade;
-        adicionarMoedas(quantidade);
-    } else if (cmd == "tripul") {
-        int id, quantidade;
-        ss >> id >> quantidade;
-        tripul(id, quantidade);
-    } else if (cmd == "saves") {
-        std::string nome;
-        ss >> nome;
-        saves(nome);
-    } else if (cmd == "loads") {
-        std::string nome;
-        ss >> nome;
-        loads(nome);
-    } else if (cmd == "lists") {
-        lists();
-    } else if (cmd == "dels") {
-        std::string nome;
-        ss >> nome;
-        dels(nome);
-    } else if (cmd == "terminar") {
-        terminar();
+    
+    auto it = comandos.find(cmd);
+    if (it != comandos.end()) {
+        it->second(*this, ss);
     } else {
         std::cout << "Comando desconhecido: " << cmd << std::endl;
     }
-}
-
-void Simulacao::exec(const std::string &nomeFicheiro) {
-    // Try different possible file locations with absolute path
-    std::vector<std::string> possiblePaths = {
-        nomeFicheiro,
-        "./" + nomeFicheiro,
-        "../" + nomeFicheiro,
-        "/home/miguel/Desktop/TP/POO/POO_TP_2425/" + nomeFicheiro
-    };
-
-    std::ifstream file;
-    std::string pathUsed;
-    
-    for (const auto& path : possiblePaths) {
-        std::cout << "Trying to open command file: " << path << std::endl;
-        file.open(path);
-        if (file.is_open()) {
-            pathUsed = path;
-            std::cout << "Successfully opened command file: " << path << std::endl;
-            break;
-        }
-    }
-
-    if (!file.is_open()) {
-        std::cerr << "Error: Could not open command file. Attempted paths:" << std::endl;
-        for (const auto& path : possiblePaths) {
-            std::cerr << "- " << path << std::endl;
-        }
-        return;
-    }
-
-    std::string linha;
-    int lineNumber = 0;
-    
-    while (std::getline(file, linha)) {
-        lineNumber++;
-        // Skip empty lines and comments
-        if (linha.empty() || linha[0] == '#' || linha[0] == '/') {
-            continue;
-        }
-        
-        // Trim whitespace
-        linha.erase(0, linha.find_first_not_of(" \t"));
-        linha.erase(linha.find_last_not_of(" \t") + 1);
-        
-        if (!linha.empty()) {
-            std::cout << "Executing command from file [line " << lineNumber << "]: " << linha << std::endl;
-            executarComandos(linha);
-        }
-    }
-    
-    file.close();
-    std::cout << "Finished executing commands from file: " << pathUsed << std::endl;
 }
 
 void Simulacao::prox(int n) {
@@ -770,4 +756,63 @@ void Simulacao::dels(const std::string& nome) {
 
 void Simulacao::terminar() {
     terminarSimulacao();
+}
+
+void Simulacao::verificarFimJogo() {
+    bool semCaravanas = mapa.getCaravanas().empty();
+    bool semDinheiro = moedas < precoCaravana;
+    
+    if (semCaravanas && semDinheiro) {
+        std::cout << "\nGame Over!\n";
+        std::cout << "Instantes decorridos: " << instantesDecorridos << "\n";
+        std::cout << "Combates vencidos: " << combatesVencidos << "\n";
+        std::cout << "Moedas finais: " << moedas << std::endl;
+    }
+}
+
+void Simulacao::atualizarEstatisticas() {
+    std::cout << "\nEstatísticas da simulação:\n"
+              << "Instantes decorridos: " << instantesDecorridos << "\n"
+              << "Combates vencidos: " << combatesVencidos << "\n"
+              << "Moedas: " << moedas << "\n"
+              << "Caravanas ativas: " << mapa.getCaravanas().size() << std::endl;
+}
+
+void Simulacao::lerConfig(const std::string& nomeFicheiro) {
+    carregarArquivo(nomeFicheiro, true);
+}
+
+void Simulacao::realizarCombate(Caravana& caravana, Barbaro& barbaro) {
+    if (caravana.isDestruida() || barbaro.isDestruido()) return;
+
+    // Calculate combat strength for each side
+    int forcaCaravana = rand() % (caravana.getTripulantes() + 1);
+    int forcaBarbaro = rand() % (barbaro.getTripulantes() + 1);
+
+    if (forcaCaravana > forcaBarbaro) {
+        // Caravana wins
+        combatesVencidos++;
+        int perdaCaravana = caravana.getTripulantes() * 0.2;  // 20% loss
+        int perdaBarbaro = perdaCaravana * 2;  // Barbarians lose double
+        
+        caravana.adicionarTripulantes(-perdaCaravana);
+        barbaro.adicionarTripulantes(-perdaBarbaro);
+        
+        if (barbaro.getTripulantes() <= 0) {
+            caravana.adicionarAgua(barbaro.getAgua());
+            barbaro.destruir();
+        }
+    } else {
+        // Barbaro wins
+        int perdaBarbaro = barbaro.getTripulantes() * 0.2;
+        int perdaCaravana = perdaBarbaro * 2;
+        
+        barbaro.adicionarTripulantes(-perdaBarbaro);
+        caravana.adicionarTripulantes(-perdaCaravana);
+        
+        if (caravana.getTripulantes() <= 0) {
+            barbaro.adicionarAgua(caravana.getAgua());
+            caravana.destruir();
+        }
+    }
 }

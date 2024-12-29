@@ -4,6 +4,8 @@
 
 #include <string>
 #include <map>
+#include <vector>  // Add this include
+#include <functional>  // Add this for std::function
 #include "mapa.h"
 #include "caravana.h"
 #include "barbaro.h"
@@ -29,6 +31,15 @@ private:
     bool verificarCombate(int x1, int y1, int x2, int y2);  // Updated parameters
     void aplicarEfeitoItem(Caravana& caravana, Item::Tipo tipo);
     void realizarCombate(Caravana& caravana, Barbaro& barbaro);
+
+    struct CombateInfo {
+        int carId;
+        int barId;
+        bool emCombate;
+        int turnosSemFuga;
+    };
+    std::vector<CombateInfo> combatesAtivos;
+    void processarFugaCombate();
 
 public:
     Simulacao();
@@ -69,6 +80,11 @@ public:
     void dels(const std::string &nome);
     void terminar();
     int getMoedas() const { return moedas; }  // Add this getter
+    void verificarFimJogo();
+    void processarMultiplosCombates();
+    void atualizarEstatisticas();
+    void carregarArquivo(const std::string& nomeFicheiro, bool isConfig);  // Add this declaration
+    void processarCombates();  // Add this declaration
 };
 
 #endif

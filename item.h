@@ -30,6 +30,8 @@ public:
     Tipo getTipo() const;
     void aplicarEfeito(Caravana& caravana);
     static std::string getTipoNome(Tipo tipo);
+    static Item* criarItemAleatorio(int x, int y, int duracao);
+    bool estaAdjacente(int x, int y) const;
 };
 
 #endif

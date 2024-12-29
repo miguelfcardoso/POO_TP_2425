@@ -1,8 +1,5 @@
 #include "cidade.h"
-#include <iostream>
-
-// Remove constructor since it's already defined in the header
-// Cidade::Cidade(char nome, int x, int y) : nome(nome), x(x, y) { ... }
+#include "caravana.h"  // Add this include to access static members
 
 void Cidade::adicionarCaravana(const Caravana& caravana) {
     std::cout << "Adding caravana to city " << nome << " at position (" << x << "," << y << ")" << std::endl;
@@ -30,9 +27,6 @@ char Cidade::getNome() const {
     return nome;
 }
 
-// Remove the getProximaCaravanaId method entirely as it's no longer needed
-// The ID will be provided by Mapa::getNextAvailableId()
-
 int Cidade::getX() const {
     return x;
 }
@@ -51,14 +45,15 @@ void Cidade::removerCaravana(Caravana::Tipo tipo) {
 
 void Cidade::atualizarCaravanas(const std::map<int, Caravana>& todasCaravanas) {
     caravanas.clear();
-    for (const auto& [id, caravana] : todasCaravanas) {
-        // Debug output to help track caravana positions
-        std::cout << "Checking caravana " << id << " at (" << caravana.getX() 
-                 << "," << caravana.getY() << ") against city at (" 
-                 << x << "," << y << ")" << std::endl;
-                 
-        if (caravana.getX() == x && caravana.getY() == y && !caravana.isDestruida()) {
-            caravanas.push_back(caravana);
+    for (const auto& [id, car] : todasCaravanas) {
+        // Use Caravana's static members for dimensions
+        int carX = ((car.getX() % Caravana::mapaLinhas) + Caravana::mapaLinhas) % Caravana::mapaLinhas;
+        int carY = ((car.getY() % Caravana::mapaColunas) + Caravana::mapaColunas) % Caravana::mapaColunas;
+        int cityX = ((x % Caravana::mapaLinhas) + Caravana::mapaLinhas) % Caravana::mapaLinhas;
+        int cityY = ((y % Caravana::mapaColunas) + Caravana::mapaColunas) % Caravana::mapaColunas;
+        
+        if (carX == cityX && carY == cityY && !car.isDestruida()) {
+            caravanas.push_back(car);
             std::cout << "Added caravana " << id << " to city " << nome << std::endl;
         }
     }

@@ -22,6 +22,9 @@ private:
     std::vector<Barbaro> barbaros;
     std::vector<Item> itens;
 
+    bool isMontanha(int x, int y) const;
+    std::pair<int, int> normalizarCoordenadas(int x, int y) const;
+
 public:
     Mapa(int l = 10, int c = 20);
     ~Mapa();
@@ -55,7 +58,11 @@ public:
     int contarItens() const;
     void verificarInteracoesItens(Simulacao& simulacao);
     int getNextAvailableId() const;  // Add this declaration
+    bool verificarPosicao(int x, int y, char& tipo) const;  // Add this declaration
     const std::map<char, Cidade>& getCidades() const { return cidades; }
+    bool temLadoAcessivel(int x, int y) const;
+    bool isPosicaoEsferica(int& x, int& y) const;
+    std::pair<int, int> encontrarPosicaoValida() const;
 };
 
 #endif

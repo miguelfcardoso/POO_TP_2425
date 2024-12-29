@@ -6,6 +6,25 @@
 #include "simulacao.h"
 #include <cstring>
 
+// Optimize entity management by using a unified system
+class EntityManager {
+    std::map<int, Caravana> caravanas;
+    std::vector<Barbaro> barbaros;
+    std::vector<Item> itens;
+    std::map<char, Cidade> cidades;
+    
+public:
+    template<typename T>
+    void adicionarEntidade(const T& entidade) {
+        // Unified entity addition logic
+    }
+    
+    template<typename T>
+    void removerEntidade(const T& entidade) {
+        // Unified entity removal logic
+    }
+};
+
 Mapa::Mapa(int l, int c) : linhas(l), colunas(c) {
     mapa = new char*[linhas];
     for (int i = 0; i < linhas; ++i) {
@@ -83,7 +102,7 @@ void Mapa::exibirMapa() {
 void Mapa::moverCaravana(int id, char direcao) {
     if (caravanas.find(id) == caravanas.end()) return;
     
-    Caravana& caravana = caravanas[id];
+    auto& caravana = caravanas[id];
     int novoX = caravana.getX();
     int novoY = caravana.getY();
     
@@ -176,6 +195,16 @@ void Mapa::tempestadeDeAreia(int centroX, int centroY, int raio) {
             }
         }
     }
+}
+
+// Optimize position checking
+bool Mapa::verificarPosicao(int x, int y, char& tipo) const {
+    if (x < 0 || x >= linhas || y < 0 || y >= colunas) {
+        return false;
+    }
+    
+    tipo = mapa[x][y];
+    return true;
 }
 
 bool Mapa::posicaoValida(int x, int y) const {
@@ -285,8 +314,8 @@ int Mapa::contarItens() const {
 }
 
 void Mapa::verificarInteracoesItens(Simulacao& simulacao) {
-    for (auto& [id, caravana] : caravanas) {
-        Item* item = getItemAdjacente(caravana.getX(), caravana.getY());
+    for (auto& [id, car] : caravanas) {
+        Item* item = getItemAdjacente(car.getX(), car.getY());
         if (item && item->getTipo() == Item::ARCA_TESOURO) {
             double moedas = simulacao.getMoedas();  // Now using public getter
             simulacao.adicionarMoedas(moedas * 0.1);

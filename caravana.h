@@ -14,55 +14,84 @@ public:
 
 private:
     int id;
-    int x, y;
+    int x;
+    int y;
     int tripulantes;
-    int capacidadeCarga;
-    bool destruida;
     int maxTripulantes;
-    Tipo tipo;
+    int capacidadeCarga;
     int mercadoria;
     int agua;
     int maxAgua;
+    bool destruida;
     bool autogestao;
+    Tipo tipo;
     char ultimaDirecao;
+    int turnosSemTripulantes;
+    int movimentosRestantes;
+    int itemProximoX;
+    int itemProximoY;
+    int barbaroProximoX;
+    int barbaroProximoY;
+    
+    static const int MAX_MOVIMENTOS_COMERCIO = 2;
+    static const int MAX_MOVIMENTOS_MILITAR = 3;
+    static const int MAX_MOVIMENTOS_SECRETA = 1;
+
+public:
+    static const int DISTANCIA_DETECAO_ITEM = 2;
+    static const int DISTANCIA_DETECAO_BARBARO = 6;
     static int mapaLinhas;
     static int mapaColunas;
 
-public:
-    Caravana(); // Add default constructor
-    Caravana(int id, int x, int y);
     Caravana(int id, int x, int y, Tipo tipo);
-    void mover(char direcao);
+    Caravana(int id, int x, int y);
+    Caravana();
+
+    // Movement methods
+    void mover(char direcao, const std::pair<int, int>& destino = {-1, -1});
+    void moverParaDestino(int destX, int destY);
+    void moverParaCaravanaProxima();
     void moverAutonomo();
     void moverSemTripulantes();
+    void resetarMovimentos();
+    bool podeSeMovimentar() const;
+
+    // State methods
     void adicionarTripulantes(int n);
     void venderMercadoria(int precoVenda);
     void comprarMercadoria(int quantidade, int precoCompra);
     void consumirAgua();
+    void reabastecerAgua();
     void mostrarDetalhes() const;
     void destruir();
-    bool isDestruida() const;
-    void setPos(int novoX, int novoY);
-    void adicionarAgua(int quantidade);
-    
+    void processarTempestedeAreia();
+    void atualizarTurnosSemTripulantes();
+    void gerenciarRecursos();
+
+    // Getters and setters
+    int getId() const;
     int getTripulantes() const;
     int getMaxTripulantes() const;
-    int getAgua() const;
-    Tipo getTipo() const;
     int getMercadoria() const;
     int getCapacidadeCarga() const;
-    int getId() const;
+    int getAgua() const;
+    Tipo getTipo() const;
+    bool isDestruida() const;
+    bool getAutogestao() const;
+    void setAutogestao(bool valor);
+    void setPos(int novoX, int novoY);
+    void adicionarAgua(int quantidade);
     int getX() const { return x; }
     int getY() const { return y; }
-    void setAutogestao(bool estado) { autogestao = estado; }
-    bool getAutogestao() const { return autogestao; }
-    void reabastecerAgua();
-    bool podeMoverse() const;
-    int getMaxAgua() const;
-    static void setMapaDimensoes(int l, int c) {
-        mapaLinhas = l;
-        mapaColunas = c;
-    }
+
+    // Detection methods
+    bool podeApanharItem() const;
+    bool podeVerItem(int itemX, int itemY) const;
+    bool podeVerBarbaro(int barbaroX, int barbaroY) const;
+
+private:
+    int calcularConsumoAgua() const;
+    void perderTripulante();
 };
 
 #endif
