@@ -1,0 +1,3 @@
+comprac a C 
+compra 0 2
+tripul 0 10

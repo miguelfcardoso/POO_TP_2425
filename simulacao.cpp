@@ -502,16 +502,57 @@ void Simulacao::executarComandos(const std::string& comando) {
 }
 
 void Simulacao::exec(const std::string &nomeFicheiro) {
-    std::ifstream file(nomeFicheiro);
-    if (!file) {
-        std::cerr << "Erro ao abrir o ficheiro de comandos." << std::endl;
+    // Try different possible file locations with absolute path
+    std::vector<std::string> possiblePaths = {
+        nomeFicheiro,
+        "./" + nomeFicheiro,
+        "../" + nomeFicheiro,
+        "/home/miguel/Desktop/TP/POO/POO_TP_2425/" + nomeFicheiro
+    };
+
+    std::ifstream file;
+    std::string pathUsed;
+    
+    for (const auto& path : possiblePaths) {
+        std::cout << "Trying to open command file: " << path << std::endl;
+        file.open(path);
+        if (file.is_open()) {
+            pathUsed = path;
+            std::cout << "Successfully opened command file: " << path << std::endl;
+            break;
+        }
+    }
+
+    if (!file.is_open()) {
+        std::cerr << "Error: Could not open command file. Attempted paths:" << std::endl;
+        for (const auto& path : possiblePaths) {
+            std::cerr << "- " << path << std::endl;
+        }
         return;
     }
 
-    std::string comando;
-    while (std::getline(file, comando)) {
-        executarComandos(comando);
+    std::string linha;
+    int lineNumber = 0;
+    
+    while (std::getline(file, linha)) {
+        lineNumber++;
+        // Skip empty lines and comments
+        if (linha.empty() || linha[0] == '#' || linha[0] == '/') {
+            continue;
+        }
+        
+        // Trim whitespace
+        linha.erase(0, linha.find_first_not_of(" \t"));
+        linha.erase(linha.find_last_not_of(" \t") + 1);
+        
+        if (!linha.empty()) {
+            std::cout << "Executing command from file [line " << lineNumber << "]: " << linha << std::endl;
+            executarComandos(linha);
+        }
     }
+    
+    file.close();
+    std::cout << "Finished executing commands from file: " << pathUsed << std::endl;
 }
 
 void Simulacao::prox(int n) {
@@ -633,7 +674,35 @@ void Simulacao::adicionarMoedas(int quantidade) {  // renamed from moedas
 }
 
 void Simulacao::tripul(int id, int quantidade) {
-    comprarTripulantes(id, quantidade);
+    try {
+        auto& caravana = mapa.getCaravanas().at(id);
+        
+        // Check if caravana is in a city
+        if (!mapa.isCidade(caravana.getX(), caravana.getY())) {
+            std::cout << "A caravana deve estar em uma cidade para comprar tripulantes." << std::endl;
+            return;
+        }
+        
+        // Check if we have enough money
+        if (moedas < quantidade) {
+            std::cout << "Moedas insuficientes." << std::endl;
+            return;
+        }
+        
+        // Check if there's room for new crew members
+        int espacoDisponivel = caravana.getMaxTripulantes() - caravana.getTripulantes();
+        if (quantidade > espacoDisponivel) {
+            std::cout << "Não há espaço suficiente na caravana. Espaço disponível: " << espacoDisponivel << std::endl;
+            return;
+        }
+        
+        moedas -= quantidade;
+        caravana.adicionarTripulantes(quantidade);
+        std::cout << "Tripulantes adicionados com sucesso." << std::endl;
+        
+    } catch (const std::out_of_range&) {
+        std::cout << "Caravana " << id << " não encontrada." << std::endl;
+    }
 }
 
 void Simulacao::saves(const std::string& nome) {
