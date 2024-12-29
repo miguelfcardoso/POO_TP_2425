@@ -646,7 +646,24 @@ void Simulacao::caravana(int id) {
 }
 
 void Simulacao::vende(int id) {
-    venderMercadoria(id);
+    try {
+        auto& caravana = mapa.getCaravanas().at(id);
+        
+        // Check if caravana is in a city
+        bool estaNaCidade = mapa.isCidade(caravana.getX(), caravana.getY());
+        if (!estaNaCidade) {
+            std::cout << "A caravana deve estar em uma cidade para vender mercadorias." << std::endl;
+            return;
+        }
+
+        int quantidade = caravana.getMercadoria();
+        int valorVenda = quantidade * precoVendaMercadoria;
+        caravana.venderMercadoria(precoVendaMercadoria);
+        moedas += valorVenda;
+        std::cout << "Vendidas " << quantidade << " mercadorias por " << valorVenda << " moedas." << std::endl;
+    } catch (const std::out_of_range&) {
+        std::cout << "Caravana " << id << " não encontrada." << std::endl;
+    }
 }
 
 void Simulacao::move(int id, char direcao) {
@@ -654,11 +671,23 @@ void Simulacao::move(int id, char direcao) {
 }
 
 void Simulacao::autoGestao(int id) {
-    // Implementar l��gica para colocar a caravana em auto-gestão
+    try {
+        auto& caravana = mapa.getCaravanas().at(id);
+        caravana.setAutogestao(true);
+        std::cout << "Auto-gestão ativada para caravana " << id << std::endl;
+    } catch (const std::out_of_range&) {
+        std::cout << "Caravana " << id << " não encontrada." << std::endl;
+    }
 }
 
 void Simulacao::stop(int id) {
-    // Implementar lógica para parar a auto-gestão da caravana
+    try {
+        auto& caravana = mapa.getCaravanas().at(id);
+        caravana.setAutogestao(false);
+        std::cout << "Auto-gestão desativada para caravana " << id << std::endl;
+    } catch (const std::out_of_range&) {
+        std::cout << "Caravana " << id << " não encontrada." << std::endl;
+    }
 }
 
 void Simulacao::barbaro(int x, int y) {

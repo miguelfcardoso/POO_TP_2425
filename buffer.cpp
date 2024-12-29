@@ -2,6 +2,7 @@
 #include <cstring>
 #include <string>
 #include <sstream>
+#include <locale.h>
 
 Buffer::Buffer(int l, int c) : linhas(l), colunas(c), cursorX(0), cursorY(0) {
     buffer = new char*[linhas];
@@ -65,35 +66,37 @@ void Buffer::esvaziar() {
 }
 
 void Buffer::transcreverParaConsola() const {
-    // Clear screen once
-    std::cout << "\033[2J\033[H";
+    std::cout << "\033[2J\033[H";  // Clear screen
     
-    // Draw single border
-    std::cout << "╔";
-    for (int j = 0; j < colunas; ++j) std::cout << "═";
-    std::cout << "╗\n";
-
-    // Draw map content
+    // Top border with simple ASCII
+    std::cout << "+";
+    for (int j = 0; j < colunas; ++j) 
+        std::cout << "-";
+    std::cout << "+\n";
+    
+    // Map content with simple ASCII
     for (int i = 0; i < linhas; ++i) {
-        std::cout << "║";
+        std::cout << "|";  // Left border
         for (int j = 0; j < colunas; ++j) {
             char c = buffer[i][j];
             
-            if (c >= 'a' && c <= 'z') std::cout << "\033[32m" << c << "\033[0m";
-            else if (c >= '0' && c <= '9') std::cout << "\033[34m" << c << "\033[0m";
-            else if (c == '!') std::cout << "\033[31m" << c << "\033[0m";
-            else if (c == '+') std::cout << "\033[33m" << c << "\033[0m";
-            else if (c == 'I') std::cout << "\033[35m" << c << "\033[0m";
-            else if (c == '*') std::cout << "\033[33;1m" << c << "\033[0m";  // Bright yellow for sandstorm
-            else std::cout << ".";
+            // Use simpler coloring scheme that works everywhere
+            if (c >= 'a' && c <= 'z') std::cout << c;  // Cities
+            else if (c >= '0' && c <= '9') std::cout << c;  // Caravans
+            else if (c == '!') std::cout << c;  // Barbarians
+            else if (c == '+') std::cout << c;  // Obstacles
+            else if (c == 'I') std::cout << c;  // Items
+            else if (c == '*') std::cout << c;  // Sandstorm
+            else std::cout << ".";  // Empty space
         }
-        std::cout << "║\n";
+        std::cout << "|\n";  // Right border
     }
 
-    // Draw bottom border
-    std::cout << "╚";
-    for (int j = 0; j < colunas; ++j) std::cout << "═";
-    std::cout << "╝" << std::endl;
+    // Bottom border with simple ASCII
+    std::cout << "+";
+    for (int j = 0; j < colunas; ++j) 
+        std::cout << "-";
+    std::cout << "+\n";
 }
 
 void Buffer::moverCursor(int x, int y) {

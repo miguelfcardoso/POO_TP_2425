@@ -89,7 +89,12 @@ void Caravana::moverAutonomo() {
 }
 
 void Caravana::moverSemTripulantes() {
-    // TODO: Implement movement without crew
+    if (tripulantes > 0) return;
+    
+    // Random movement for caravana without crew
+    char directions[] = {'C', 'B', 'E', 'D'};
+    char dir = directions[rand() % 4];
+    mover(dir);
 }
 
 void Caravana::adicionarTripulantes(int n) {
@@ -97,9 +102,7 @@ void Caravana::adicionarTripulantes(int n) {
 }
 
 void Caravana::venderMercadoria(int precoVenda) {
-    int valorVenda = mercadoria * precoVenda;
-    mercadoria = 0;
-    // Adicionar valorVenda às moedas do usuário
+    mercadoria = 0;  // Clear merchandise after selling
 }
 
 void Caravana::comprarMercadoria(int quantidade, int precoCompra) {

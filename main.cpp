@@ -3,8 +3,13 @@
 #include <algorithm>
 #include "simulacao.h"
 #include "buffer.h"
+#include <locale.h>
 
 int main() {
+    // Add these at the start of main
+    setlocale(LC_ALL, "en_US.UTF-8");
+    std::ios_base::sync_with_stdio(true);
+    
     Simulacao simulacao;
     bool simulacaoIniciada = false;
 
