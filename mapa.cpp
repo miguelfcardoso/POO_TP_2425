@@ -87,6 +87,7 @@ void Mapa::moverCaravana(int id, char direcao) {
     int novoX = caravana.getX();
     int novoY = caravana.getY();
     
+    // Calculate new position based on direction
     switch(direcao) {
         case 'D': novoY = (novoY + 1) % colunas; break;
         case 'E': novoY = (novoY - 1 + colunas) % colunas; break;
@@ -114,22 +115,38 @@ void Mapa::moverCaravana(int id, char direcao) {
     if (posicaoValida(novoX, novoY)) {
         // Check if current position was a city before replacing with dot
         bool oldPosWasCity = false;
+        char oldCityChar = '.';
         for (const auto& [nome, cidade] : cidades) {
             if (cidade.getX() == caravana.getX() && cidade.getY() == caravana.getY()) {
                 oldPosWasCity = true;
-                mapa[caravana.getX()][caravana.getY()] = nome;
+                oldCityChar = nome;
                 break;
             }
         }
         
-        if (!oldPosWasCity) {
-            mapa[caravana.getX()][caravana.getY()] = '.';
+        // Restore city character at old position if needed
+        mapa[caravana.getX()][caravana.getY()] = oldPosWasCity ? oldCityChar : '.';
+
+        // Check if new position is a city
+        bool newPosIsCity = false;
+        char cityChar = '.';
+        for (const auto& [nome, cidade] : cidades) {
+            if (cidade.getX() == novoX && cidade.getY() == novoY) {
+                newPosIsCity = true;
+                cityChar = nome;
+                break;
+            }
         }
 
-        // Update new position
-        char oldChar = mapa[novoX][novoY];  // Store the character at new position
+        // Update caravana position
         caravana.setPos(novoX, novoY);
-        mapa[novoX][novoY] = '0' + id;
+        
+        // If the new position is a city, preserve the city character in the visual map
+        if (newPosIsCity) {
+            mapa[novoX][novoY] = cityChar;
+        } else {
+            mapa[novoX][novoY] = '0' + id;
+        }
 
         // Update city tracking after movement
         for (auto& [nome, cidade] : cidades) {
